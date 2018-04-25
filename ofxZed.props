@@ -1,0 +1,19 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ImportGroup Label="PropertySheets" />
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <ZED_SDK_DIR>C:\Program Files (x86)\ZED SDK</ZED_SDK_DIR>
+    <CUDA_DIR>C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v9.0</CUDA_DIR>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(ZED_SDK_DIR)\dependencies\opencv_3.1.0\include\opencv;$(ZED_SDK_DIR)\dependencies\opencv_3.1.0\include;$(ZED_SDK_DIR)\dependencies\eigen-3.2.8;$(ZED_SDK_DIR)\include;$(ZED_SDK_DIR)\include\sl_core;$(ZED_SDK_DIR)\include\sl;$(ZED_SDK_DIR)\include\sl_zed;$(CUDA_DIR)\include;..\..\..\addons\ofxKuZed\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>opencv_world310.lib;sl_zed64.lib;sl_core64.lib;cuda.lib;cudart.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(ZED_SDK_DIR)/lib;$(ZED_SDK_DIR)/lib/$(Configuration);$(ZED_SDK_DIR)/dependencies/freeglut_2.8/$(Platform);$(ZED_SDK_DIR)/dependencies/freeglut_2.8/$(Platform)/$(Configuration);$(ZED_SDK_DIR)/dependencies/glew-1.12.0/$(Platform)/$(Configuration);$(ZED_SDK_DIR)/dependencies/glew-1.12.0/$(Platform);$(ZED_SDK_DIR)/dependencies/opencv_3.1.0/$(Platform)/vc14/lib;$(CUDA_DIR)/lib/$(Platform);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup />
+</Project>
