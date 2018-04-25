@@ -96,7 +96,7 @@ To compile the addon's example you need:
 
    If you are using older ZED SDK, you need:
    
-       Write proper path in <ZED_SDK_DIR> in file''' zedExample.vcxproj''',
+       Write proper path in <ZED_SDK_DIR> in file''' ofxZed.props''' (the property sheet file),
    
        Adjust project's properties to valid paths and libs names in the following settings:
        - C/C++ - General - Additional include directories
@@ -107,6 +107,11 @@ To run the example you need:
 * ZED camera
 * USB 3.0 is preferrable (camera works with USB 2.0 too, but slower)
 
+## Creating a new project
+
+1. Make your project with Project Generator, selecting ofxKuZed
+2. In `Property Manager` (open it from `View -> Other Windows -> Property Manager`), right click on your project to select `Add Existing Property Sheet...` and select the `ofxZed.props` file. 
+3. That's it!
 
 ##Credits
 The addon is based on 
