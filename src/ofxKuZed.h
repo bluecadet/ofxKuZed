@@ -143,7 +143,7 @@ const int ZED_DEPTH_POSTPROCESS_FILL = sl::SENSING_MODE_FILL;// sl::zed::FILL;		
 const int ZED_DEPTH_POSTPROCESS_STANDARD = sl::SENSING_MODE_STANDARD;// sl::zed::STANDARD;	//No occlusion filling
 
 
-class ofxKuZed
+class ofxKuZed : protected ofThread
 {
 public:
 	ofxKuZed();
@@ -231,6 +231,10 @@ public:
 
 	//Output some information about the current status of initialization
 	void setVerboseOutput(bool verbose);	//default: false
+
+protected:
+
+	void threadedFunction();
 
 private:
 	//Settings

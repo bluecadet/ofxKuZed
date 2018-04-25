@@ -29,14 +29,13 @@ void ofxKuZed::init()
 	cudaDriverGetVersion(&version);
 	cudaRuntimeGetVersion(&v);
 
-
-	ofLog() << "Version " << version << ":" << v << endl;
+	ofLogVerbose() << "Cuda version " << version << ":" << v << endl;
 
 	zed_ = new sl::Camera();
 
-
-
 	ERROR_CODE zederr = zed_->open(params_);
+
+	bool bOpened = false;
 
 	if (zederr != sl::SUCCESS)
 	{
@@ -47,6 +46,7 @@ void ofxKuZed::init()
 	else
 	{
 		ofLog() << "ZED started." << endl;
+		bOpened = true;
 	}
 
 	//We will allocate buffers anyway, even if no camera
@@ -63,11 +63,15 @@ void ofxKuZed::init()
 	rightTexture_.allocate(w_, h_, GL_RGB, false);
 	depthTexture_.allocate(w_, h_, GL_LUMINANCE, false);
 
+	if (bOpened )
+		startThread();
 }
 
 //------------------------------------------------------------------------------------------------------
 void ofxKuZed::close() {
 	if (zed_) {
+		waitForThread();
+//		stopThread();
 		ofLog() << "Closing ZED..." << endl;
 		delete zed_;
 		zed_ = 0;
@@ -114,15 +118,91 @@ void ofxKuZed::markBuffersDirty(bool dirty) {
 void ofxKuZed::update()
 {
 	if (started()) {
+		//if (useImages_ || useDepth_ || usePointCloud_) {
+		//	//Grab data
+		//	bool computeDepth = (useDepth_ || usePointCloud_);
+		//	bool computeXYZ = usePointCloud_;
+		//	zed_->grab();
+		//	markBuffersDirty(true);
+		//}
+
+		if (leftTextureDirty_) {
+			leftTextureDirty_ = false;
+			leftTexture_.loadData(getLeftPixels());
+		}
+
+		if (rightTextureDirty_) {
+			rightTextureDirty_ = false;
+			rightTexture_.loadData(getRightPixels());
+		}
+
+		if (depthTextureDirty_) {
+			depthTextureDirty_ = false;
+			depthTexture_.loadData(depthPixels_grayscale_);
+		}
+	}
+
+}
+
+//------------------------------------------------------------------------------------------------------
+void ofxKuZed::threadedFunction() {
+	while (isThreadRunning()) {
 		if (useImages_ || useDepth_ || usePointCloud_) {
 			//Grab data
 			bool computeDepth = (useDepth_ || usePointCloud_);
 			bool computeXYZ = usePointCloud_;
 			zed_->grab();
 			markBuffersDirty(true);
+
+			// images
+			if (useImages_) {
+				if (leftPixelsDirty_) {
+					leftPixelsDirty_ = false;
+					sl::Mat zedView;
+					zed_->retrieveImage(zedView, sl::VIEW_LEFT);
+					lock();
+					leftPixels_.setFromPixels(zedView.getPtr<sl::uchar1>(), zedView.getWidth(), zedView.getHeight(), OF_PIXELS_BGRA);
+					unlock();
+					leftTextureDirty_ = true;
+				}
+				
+				if (rightPixelsDirty_) {
+					rightPixelsDirty_ = false;
+					sl::Mat zedView;
+					zed_->retrieveImage(zedView, sl::VIEW_RIGHT);
+					rightPixels_.setFromPixels(zedView.getPtr<sl::uchar1>(), zedView.getWidth(), zedView.getHeight(), OF_PIXELS_BGRA);
+				}
+			}
+
+			// depth
+			if (useDepth_) {
+				if (depthPixels_grayscale_Dirty_) {
+					depthPixels_grayscale_Dirty_ = false;
+
+					//sl::Mat zedView = zed_->normalizeMeasure(sl::MEASURE::MEASURE_DEPTH, min_depth_mm, max_depth_mm);
+					sl::Mat zedView;
+
+					// is this a good idea?
+					//zed_->setDepthMaxRangeValue(max_depth_mm);
+					zed_->retrieveImage(zedView, sl::VIEW_DEPTH, sl::MEM_CPU);
+
+					depthPixels_grayscale_.setFromPixels(zedView.getPtr <sl::uchar1>(), zedView.getWidth(), zedView.getHeight(), OF_PIXELS_RGBA);
+				}
+				if (depthPixels_mm_Dirty_) {
+					depthPixels_mm_Dirty_ = false;
+					sl::Mat zedView;
+					zed_->retrieveMeasure(zedView, sl::MEASURE::MEASURE_DEPTH);
+					depthPixels_mm_.setFromPixels(zedView.getPtr<sl::float1>(), zedView.getWidth(), zedView.getHeight(), OF_PIXELS_GRAY);
+				}
+				depthTextureDirty_ = true;
+			}
+			if (usePointCloud_) {
+				lock();
+				fillPointCloud();
+				unlock();
+			}
 		}
 	}
-
 }
 
 //------------------------------------------------------------------------------------------------------
@@ -153,22 +233,13 @@ int ofxKuZed::getHeight()
 ofFloatPixels & ofxKuZed::getDepthPixels_mm()
 {
 	if (started()) {
-		if (depthPixels_mm_Dirty_) {
+		/*if (depthPixels_mm_Dirty_) {
 			depthPixels_mm_Dirty_ = false;
 			sl::Mat zedView;
 			zed_->retrieveMeasure(zedView, sl::MEASURE::MEASURE_DEPTH);
 
 			depthPixels_mm_.setFromPixels(zedView.getPtr<sl::float1>(), zedView.getWidth(), zedView.getHeight(), OF_PIXELS_GRAY);
-
-			/*float *pix = depthPixels_mm_.getData();
-			int step = zedView.getStep() / 4;
-			for (int y = 0; y < h_; y++) {
-				for (int x = 0; x < w_; x++) {
-					float pixel = ((float*)(zedView.getPtr<sl::float1>() ))[x + step*y];
-					pix[x + y * w_] = pixel;
-				}
-			}*/
-		}
+		}*/
 	}
 
 	return depthPixels_mm_;
@@ -178,31 +249,18 @@ ofFloatPixels & ofxKuZed::getDepthPixels_mm()
 ofPixels & ofxKuZed::getDepthPixels_grayscale(float min_depth_mm, float max_depth_mm)
 {
 	if (started()) {
-		if (depthPixels_grayscale_Dirty_) {
-			depthPixels_grayscale_Dirty_ = false;
+		//if (depthPixels_grayscale_Dirty_) {
+		//	depthPixels_grayscale_Dirty_ = false;
 
-			//sl::Mat zedView = zed_->normalizeMeasure(sl::MEASURE::MEASURE_DEPTH, min_depth_mm, max_depth_mm);
-			sl::Mat zedView;
+		//	//sl::Mat zedView = zed_->normalizeMeasure(sl::MEASURE::MEASURE_DEPTH, min_depth_mm, max_depth_mm);
+		//	sl::Mat zedView;
 
-			// is this a good idea?
-			zed_->setDepthMaxRangeValue(max_depth_mm);
-			zed_->retrieveImage(zedView, sl::VIEW_DEPTH, sl::MEM_CPU);
+		//	// is this a good idea?
+		//	zed_->setDepthMaxRangeValue(max_depth_mm);
+		//	zed_->retrieveImage(zedView, sl::VIEW_DEPTH, sl::MEM_CPU);
 
-			depthPixels_grayscale_.setFromPixels(zedView.getPtr <sl::uchar1> (), zedView.getWidth(), zedView.getHeight(), OF_PIXELS_RGBA);
-
-			/*unsigned char *pix = depthPixels_grayscale_.getData();
-
-			//ofLog() << zedView.width << " // " << zedView.height << endl;
-			// is there a way to do this as a big copy instead of a loop?
-			for (int y = 0; y < h_; y++) {
-				for (int x = 0; x < w_; x++) {
-					float pixel;
-					zedView.getValue(x, y, &pixel);
-					int index = (x + y * w_);
-					pix[index] = pixel;
-				}
-			}*/
-		}
+		//	depthPixels_grayscale_.setFromPixels(zedView.getPtr <sl::uchar1> (), zedView.getWidth(), zedView.getHeight(), OF_PIXELS_RGBA);
+		//}
 	}
 
 	return depthPixels_grayscale_;
@@ -216,10 +274,10 @@ ofTexture &ofxKuZed::getDepthTexture(float min_depth_mm, float max_depth_mm)
 			ofLogWarning() << "ZED: trying to access depth buffer. You need to call setUseDepth(true) before it!" << endl;
 		}
 		else {
-			if (depthTextureDirty_) {
+			/*if (depthTextureDirty_) {
 				depthTextureDirty_ = false;
 				depthTexture_.loadData(getDepthPixels_grayscale(min_depth_mm, max_depth_mm));
-			}
+			}*/
 		}
 	}
 	return depthTexture_;
@@ -233,13 +291,13 @@ ofPixels & ofxKuZed::getLeftPixels()
 			ofLogWarning() << "ZED: trying to access left image pixels. You need to call setUseImages(true) before it!" << endl;
 		}
 		else {
-			if (leftPixelsDirty_) {
+			/*if (leftPixelsDirty_) {
 				leftPixelsDirty_ = false;
 				sl::Mat zedView;
 				zed_->retrieveImage(zedView, sl::VIEW_LEFT);
 
 				leftPixels_.setFromPixels(zedView.getPtr<sl::uchar1>(), zedView.getWidth(), zedView.getHeight(), OF_PIXELS_BGRA);
-			}
+			}*/
 		}
 	}
 	return leftPixels_;
@@ -254,10 +312,10 @@ ofTexture & ofxKuZed::getLeftTexture()
 			ofLogWarning() << "ZED: trying to access left image. You need to call setUseImages(true) before it!" << endl;
 		}
 		else {
-			if (leftTextureDirty_) {
+			/*if (leftTextureDirty_) {
 				leftTextureDirty_ = false;
 				leftTexture_.loadData(getLeftPixels());
-			}
+			}*/
 		}
 	}
 	return leftTexture_;
@@ -271,13 +329,13 @@ ofPixels & ofxKuZed::getRightPixels()
 			ofLogWarning() << "ZED: trying to access right image pixels. You need to call setUseImages(true) before it!" << endl;
 		}
 		else {
-			if (rightPixelsDirty_) {
+			/*if (rightPixelsDirty_) {
 				rightPixelsDirty_ = false;
 				sl::Mat zedView;
 				zed_->retrieveImage(zedView, sl::VIEW_RIGHT);
 
 				rightPixels_.setFromPixels(zedView.getPtr<sl::uchar1>(), zedView.getWidth(), zedView.getHeight(), OF_PIXELS_BGRA);
-			}
+			}*/
 		}
 	}
 	return rightPixels_;
@@ -291,10 +349,10 @@ ofTexture & ofxKuZed::getRightTexture()
 			ofLogWarning() << "ZED: trying to access right image. You need to call setUseImages(true) before it!" << endl;
 		}
 		else {
-			if (rightTextureDirty_) {
+			/*if (rightTextureDirty_) {
 				rightTextureDirty_ = false;
 				rightTexture_.loadData(getRightPixels());
-			}
+			}*/
 		}
 	}
 	return rightTexture_;
@@ -312,7 +370,7 @@ void ofxKuZed::fillPointCloud() {
 
 				if (!usePointCloudColors_) {
 					sl::Mat zedView;
-					(zed_->retrieveMeasure(zedView, sl::MEASURE_XYZ));
+					zed_->retrieveMeasure(zedView, sl::MEASURE_XYZ);
 					//XYZ, 3D coordinates of the image points, 4 channels, FLOAT  (the 4th channel may contains the colors)
 
 					int w = zedView.getWidth();
@@ -373,14 +431,14 @@ void ofxKuZed::fillPointCloud() {
 //------------------------------------------------------------------------------------------------------
 vector<ofPoint>& ofxKuZed::getPointCloud()
 {
-	fillPointCloud();
+	//fillPointCloud();
 	return pointCloud_;
 }
 
 //------------------------------------------------------------------------------------------------------
 vector<ofColor>& ofxKuZed::getPointCloudColors()
 {
-	fillPointCloud();
+	//fillPointCloud();
 	return pointCloudColors_;
 }
 
@@ -389,7 +447,7 @@ vector<ofFloatColor>& ofxKuZed::getPointCloudFloatColors()
 {
 	if (pointCloudFloatColorsDirty_) {
 		pointCloudFloatColorsDirty_ = false;
-		fillPointCloud();
+		//fillPointCloud();
 		//convert pointCloudColors_ to pointCloudFloatColors_
 		size_t n = pointCloudColors_.size();
 		pointCloudFloatColors_.resize(n);
@@ -429,8 +487,10 @@ void ofxKuZed::drawDepth(float x, float y, float w, float h, float min_mm, float
 //------------------------------------------------------------------------------------------------------
 void ofxKuZed::drawPointCloud()
 {
+	lock();
 	vector<ofPoint> &points = getPointCloud();
 	vector<ofFloatColor> &colors = getPointCloudFloatColors();
+	unlock();
 	ofMesh mesh;
 	mesh.addVertices(points);
 	if (colors.size() == points.size()) mesh.addColors(colors);

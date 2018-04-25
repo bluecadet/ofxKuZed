@@ -7,8 +7,8 @@ void ofApp::setup()
 	//ofSetVerticalSync(true);
 
 	zed.setResolution(ZED_RESOLUTION_HD720); //ZED_RESOLUTION_VGA, ZED_RESOLUTION_HD720, ZED_RESOLUTION_HD1080, ZED_RESOLUTION_HD2K
-	zed.setFps(30);							//See the top of ofxKuZed.h for list of available FPS
-	//zed.setDepthModeQuality(ZED_DEPTH_MODE_PERFORMANCE);	//ZED_DEPTH_MODE_PERFORMANCE, ZED_DEPTH_MODE_MEDIUM, ZED_DEPTH_MODE_QUALITY
+	zed.setFps(60);							//See the top of ofxKuZed.h for list of available FPS
+	//zed.setDepthModeQuality(ZED_DEPTH_MODE_QUALITY);	//ZED_DEPTH_MODE_PERFORMANCE, ZED_DEPTH_MODE_MEDIUM, ZED_DEPTH_MODE_QUALITY
 	//zed.setDepthPostprocess(ZED_DEPTH_POSTPROCESS_STANDARD); //ZED_DEPTH_POSTPROCESS_FILL, ZED_DEPTH_POSTPROCESS_STANDARD
 	zed.setUseImages(true);
 	zed.setUseDepth(true);
