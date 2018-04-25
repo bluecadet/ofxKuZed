@@ -237,20 +237,8 @@ ofPixels & ofxKuZed::getLeftPixels()
 				leftPixelsDirty_ = false;
 				sl::Mat zedView;
 				zed_->retrieveImage(zedView, sl::VIEW_LEFT);
-				//unsigned char *pix = leftPixels_.getData();
 
-				leftPixels_.setFromPixels(zedView.getPtr<sl::uchar1>(), zedView.getWidth(), zedView.getHeight(), OF_PIXELS_RGBA);
-
-				/*for (int y = 0; y < h_; y++) {
-					for (int x = 0; x < w_; x++) {
-						sl::uchar3 pixel;
-						zedView.getValue(x, y, &pixel);
-						int index = 3 * (x + y * w_);
-						pix[index + 0] = pixel.r;
-						pix[index + 1] = pixel.g;
-						pix[index + 2] = pixel.b;
-					}
-				}*/
+				leftPixels_.setFromPixels(zedView.getPtr<sl::uchar1>(), zedView.getWidth(), zedView.getHeight(), OF_PIXELS_BGRA);
 			}
 		}
 	}
@@ -288,19 +276,7 @@ ofPixels & ofxKuZed::getRightPixels()
 				sl::Mat zedView;
 				zed_->retrieveImage(zedView, sl::VIEW_RIGHT);
 
-				rightPixels_.setFromPixels(zedView.getPtr<sl::uchar1>(), zedView.getWidth(), zedView.getHeight(), OF_PIXELS_RGBA);
-
-				/*unsigned char *pix = rightPixels_.getData();
-				for (int y = 0; y < h_; y++) {
-					for (int x = 0; x < w_; x++) {
-						sl::uchar3 pixel;
-						zedView.getValue(x, y, &pixel);
-						int index = 3 * (x + y * w_);
-						pix[index + 0] = pixel.r;
-						pix[index + 1] = pixel.g;
-						pix[index + 2] = pixel.b;
-					}
-				}*/
+				rightPixels_.setFromPixels(zedView.getPtr<sl::uchar1>(), zedView.getWidth(), zedView.getHeight(), OF_PIXELS_BGRA);
 			}
 		}
 	}
@@ -366,30 +342,14 @@ void ofxKuZed::fillPointCloud() {
 
 					float *data = (zedView.getPtr<sl::float1>());
 					unsigned char *data_char = zedView.getPtr<sl::uchar1>();
-
-					//ofLogError() << w << ":" << h << endl;
-
+					
 					for (int y = 0; y < h; y++) {
 						for (int x = 0; x < w; x++) {
 							int index = (x + w*y) * 4; //formerly step * y
 							int index_color = (index + 3) *4;
-
-							// seems to be crazy slow
-							//sl::float4 pt;
-							//zedView.getValue(x, y, &pt);
-
-							//ouch
-							// converting w paramater, which is rgba packed
-							// into 32-bit float...!
-							// adapted from PCL sample: https://github.com/stereolabs/zed-pcl/blob/master/src/main.cpp
-							//uint32_t color_uint = *(uint32_t *)&data[index_color];
-							//unsigned char *color_uchar = (unsigned char *)&color_uint;
-							//color_uint = ((uint32_t)color_uchar[0] << 16 | (uint32_t)color_uchar[1] << 8 | (uint32_t)color_uchar[2]);
-							
+														
 							pointCloud_[x + w*y] = ofPoint(data[index], data[index + 1], data[index + 2]);
-
 							pointCloudColors_[x + w*y] = ofColor(data_char[index_color], data_char[index_color + 1], data_char[index_color + 2], data_char[index_color + 3]);
-							//pointCloudColors_[x + w*y] = ofColor(color_uchar[0], color_uchar[1], color_uchar[2], color_uchar[3]);
 						}
 					}
 				}
