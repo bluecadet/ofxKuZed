@@ -1,4 +1,5 @@
 #include "ofxKuZed.h"
+using namespace sl;
 
 //------------------------------------------------------------------------------------------------------
 ofxKuZed::ofxKuZed()
@@ -22,12 +23,25 @@ void ofxKuZed::init()
 //	bUseColorImage = useColorImage;
 //	bUseDepthImage = useDepthImage;
 	ofLog() << "Starting ZED camera..." << endl;
-	zed_ = new sl::zed::Camera(sl::zed::ZEDResolution_mode(resolution_), fps_);
-	sl::zed::ERRCODE zederr = zed_->init(params_);
 
-	if (zederr != sl::zed::SUCCESS)
+	int version, v;
+	cudaSetDevice(0);
+	cudaDriverGetVersion(&version);
+	cudaRuntimeGetVersion(&v);
+
+
+	ofLog() << "Version " << version << ":" << v << endl;
+
+	zed_ = new sl::Camera();
+
+
+
+	ERROR_CODE zederr = zed_->open(params_);
+
+	if (zederr != sl::SUCCESS)
 	{
-		ofLog() << "ERROR starting ZED: " << sl::zed::errcode2str(zederr) << endl;
+		sl::String err = sl::errorCode2str(zederr);
+		ofLog() << "ERROR starting ZED: " << err.get()  << endl;
 		close();
 	}
 	else
@@ -36,10 +50,10 @@ void ofxKuZed::init()
 	}
 
 	//We will allocate buffers anyway, even if no camera
-	w_ = (started()) ? zed_->getImageSize().width : 1280;	
-	h_ = (started()) ? zed_->getImageSize().height : 720;
+	w_ = (started()) ? zed_->getResolution().width : 1280;
+	h_ = (started()) ? zed_->getResolution().height : 720;
 
-	depthPixels_grayscale_.allocate(w_, h_, 1);
+	depthPixels_grayscale_.allocate(w_, h_, 4); // change - depth view is still RGBA?
 	depthPixels_mm_.allocate(w_, h_, 1);
 
 	leftPixels_.allocate(w_, h_, 3);
@@ -104,7 +118,7 @@ void ofxKuZed::update()
 			//Grab data
 			bool computeDepth = (useDepth_ || usePointCloud_);
 			bool computeXYZ = usePointCloud_;
-			zed_->grab(sl::zed::SENSING_MODE(postprocessMode_), computeDepth, computeDepth, computeXYZ);
+			zed_->grab();
 			markBuffersDirty(true);
 		}
 	}
@@ -141,16 +155,19 @@ ofFloatPixels & ofxKuZed::getDepthPixels_mm()
 	if (started()) {
 		if (depthPixels_mm_Dirty_) {
 			depthPixels_mm_Dirty_ = false;
-			sl::zed::Mat zedView = zed_->retrieveMeasure(sl::zed::MEASURE::DEPTH);
+			sl::Mat zedView;
+			zed_->retrieveMeasure(zedView, sl::MEASURE::MEASURE_DEPTH);
 
-			float *pix = depthPixels_mm_.getData();
-			int step = zedView.step / 4;
+			depthPixels_mm_.setFromPixels(zedView.getPtr<sl::float1>(), zedView.getWidth(), zedView.getHeight(), OF_PIXELS_GRAY);
+
+			/*float *pix = depthPixels_mm_.getData();
+			int step = zedView.getStep() / 4;
 			for (int y = 0; y < h_; y++) {
 				for (int x = 0; x < w_; x++) {
-					float pixel = ((float*)(zedView.data))[x + step*y];
+					float pixel = ((float*)(zedView.getPtr<sl::float1>() ))[x + step*y];
 					pix[x + y * w_] = pixel;
 				}
-			}
+			}*/
 		}
 	}
 
@@ -164,18 +181,27 @@ ofPixels & ofxKuZed::getDepthPixels_grayscale(float min_depth_mm, float max_dept
 		if (depthPixels_grayscale_Dirty_) {
 			depthPixels_grayscale_Dirty_ = false;
 
-			sl::zed::Mat zedView = zed_->normalizeMeasure(sl::zed::MEASURE::DEPTH, min_depth_mm, max_depth_mm);
+			//sl::Mat zedView = zed_->normalizeMeasure(sl::MEASURE::MEASURE_DEPTH, min_depth_mm, max_depth_mm);
+			sl::Mat zedView;
 
-			uchar *pix = depthPixels_grayscale_.getData();
+			// is this a good idea?
+			zed_->setDepthMaxRangeValue(max_depth_mm);
+			zed_->retrieveImage(zedView, sl::VIEW_DEPTH, sl::MEM_CPU);
+
+			depthPixels_grayscale_.setFromPixels(zedView.getPtr <sl::uchar1> (), zedView.getWidth(), zedView.getHeight(), OF_PIXELS_RGBA);
+
+			/*unsigned char *pix = depthPixels_grayscale_.getData();
 
 			//ofLog() << zedView.width << " // " << zedView.height << endl;
+			// is there a way to do this as a big copy instead of a loop?
 			for (int y = 0; y < h_; y++) {
 				for (int x = 0; x < w_; x++) {
-					sl::uchar3 pixel = zedView.getValue(x, y);
+					float pixel;
+					zedView.getValue(x, y, &pixel);
 					int index = (x + y * w_);
-					pix[index] = pixel.c1;
+					pix[index] = pixel;
 				}
-			}
+			}*/
 		}
 	}
 
@@ -209,18 +235,22 @@ ofPixels & ofxKuZed::getLeftPixels()
 		else {
 			if (leftPixelsDirty_) {
 				leftPixelsDirty_ = false;
-				sl::zed::Mat zedView = zed_->retrieveImage(sl::zed::SIDE::LEFT);
-				uchar *pix = leftPixels_.getData();
+				sl::Mat zedView;
+				zed_->retrieveImage(zedView, sl::VIEW_LEFT);
+				//unsigned char *pix = leftPixels_.getData();
 
-				for (int y = 0; y < h_; y++) {
+				leftPixels_.setFromPixels(zedView.getPtr<sl::uchar1>(), zedView.getWidth(), zedView.getHeight(), OF_PIXELS_RGBA);
+
+				/*for (int y = 0; y < h_; y++) {
 					for (int x = 0; x < w_; x++) {
-						sl::uchar3 pixel = zedView.getValue(x, y);
+						sl::uchar3 pixel;
+						zedView.getValue(x, y, &pixel);
 						int index = 3 * (x + y * w_);
-						pix[index + 0] = pixel.c3;
-						pix[index + 1] = pixel.c2;
-						pix[index + 2] = pixel.c1;
+						pix[index + 0] = pixel.r;
+						pix[index + 1] = pixel.g;
+						pix[index + 2] = pixel.b;
 					}
-				}
+				}*/
 			}
 		}
 	}
@@ -255,17 +285,22 @@ ofPixels & ofxKuZed::getRightPixels()
 		else {
 			if (rightPixelsDirty_) {
 				rightPixelsDirty_ = false;
-				sl::zed::Mat zedView = zed_->retrieveImage(sl::zed::SIDE::RIGHT);
-				uchar *pix = rightPixels_.getData();
+				sl::Mat zedView;
+				zed_->retrieveImage(zedView, sl::VIEW_RIGHT);
+
+				rightPixels_.setFromPixels(zedView.getPtr<sl::uchar1>(), zedView.getWidth(), zedView.getHeight(), OF_PIXELS_RGBA);
+
+				/*unsigned char *pix = rightPixels_.getData();
 				for (int y = 0; y < h_; y++) {
 					for (int x = 0; x < w_; x++) {
-						sl::uchar3 pixel = zedView.getValue(x, y);
+						sl::uchar3 pixel;
+						zedView.getValue(x, y, &pixel);
 						int index = 3 * (x + y * w_);
-						pix[index + 0] = pixel.c3;
-						pix[index + 1] = pixel.c2;
-						pix[index + 2] = pixel.c1;
+						pix[index + 0] = pixel.r;
+						pix[index + 1] = pixel.g;
+						pix[index + 2] = pixel.b;
 					}
-				}
+				}*/
 			}
 		}
 	}
@@ -300,16 +335,17 @@ void ofxKuZed::fillPointCloud() {
 				pointCloudDirty_ = false;
 
 				if (!usePointCloudColors_) {
-					sl::zed::Mat zedView = (zed_->retrieveMeasure(sl::zed::MEASURE::XYZ));
+					sl::Mat zedView;
+					(zed_->retrieveMeasure(zedView, sl::MEASURE_XYZ));
 					//XYZ, 3D coordinates of the image points, 4 channels, FLOAT  (the 4th channel may contains the colors)
 
-					int w = zedView.width;
-					int h = zedView.height;
-					int step = zedView.step / 4;
+					int w = zedView.getWidth();
+					int h = zedView.getHeight();
+					int step = zedView.getStep() / 4;
 					pointCloud_.resize(w*h);
 					pointCloudColors_.clear();
 
-					float *data = (float*)(zedView.data);
+					float *data = (float*)(zedView.getPtr<sl::float3>() );
 					for (int y = 0; y < h; y++) {
 						for (int x = 0; x < w; x++) {
 							int index = x * 4 + step*y;
@@ -318,23 +354,42 @@ void ofxKuZed::fillPointCloud() {
 					}
 				}
 				else {
-					sl::zed::Mat zedView = (zed_->retrieveMeasure(sl::zed::MEASURE::XYZRGBA));
+					sl::Mat zedView;
+					zed_->retrieveMeasure(zedView, sl::MEASURE_XYZRGBA);
 					//XYZRGBA, 3D coordinates and Color of the image , 4 channels, FLOAT (the 4th channel encode 4 UCHAR for color) \ingroup Enumerations*/
-					int w = zedView.width;
-					int h = zedView.height;
-					int step = zedView.step / 4;
-					int step_char = zedView.step;
+					int w = zedView.getWidth();
+					int h = zedView.getHeight();
+					int step = zedView.getStep() / 4;
+					int step_char = zedView.getStep();
 					pointCloud_.resize(w*h);
 					pointCloudColors_.resize(w*h);
 
-					float *data = (float*)(zedView.data);
-					uchar *data_char = zedView.data;
+					float *data = (zedView.getPtr<sl::float1>());
+					unsigned char *data_char = zedView.getPtr<sl::uchar1>();
+
+					//ofLogError() << w << ":" << h << endl;
+
 					for (int y = 0; y < h; y++) {
 						for (int x = 0; x < w; x++) {
-							int index = x * 4 + step*y;
-							int index_color = (index+3)*4;
+							int index = (x + w*y) * 4; //formerly step * y
+							int index_color = (index + 3) *4;
+
+							// seems to be crazy slow
+							//sl::float4 pt;
+							//zedView.getValue(x, y, &pt);
+
+							//ouch
+							// converting w paramater, which is rgba packed
+							// into 32-bit float...!
+							// adapted from PCL sample: https://github.com/stereolabs/zed-pcl/blob/master/src/main.cpp
+							//uint32_t color_uint = *(uint32_t *)&data[index_color];
+							//unsigned char *color_uchar = (unsigned char *)&color_uint;
+							//color_uint = ((uint32_t)color_uchar[0] << 16 | (uint32_t)color_uchar[1] << 8 | (uint32_t)color_uchar[2]);
+							
 							pointCloud_[x + w*y] = ofPoint(data[index], data[index + 1], data[index + 2]);
+
 							pointCloudColors_[x + w*y] = ofColor(data_char[index_color], data_char[index_color + 1], data_char[index_color + 2], data_char[index_color + 3]);
+							//pointCloudColors_[x + w*y] = ofColor(color_uchar[0], color_uchar[1], color_uchar[2], color_uchar[3]);
 						}
 					}
 				}
@@ -426,12 +481,14 @@ void ofxKuZed::drawPointCloud()
 void ofxKuZed::setResolution(int zed_resolution)
 {
 	resolution_ = zed_resolution;
+	params_.camera_resolution = (sl::RESOLUTION) zed_resolution;
 }
 
 //------------------------------------------------------------------------------------------------------
 void ofxKuZed::setFps(float fps)
 {
 	fps_ = fps;
+	params_.camera_fps = fps;
 }
 
 float ofxKuZed::getFps()
@@ -442,13 +499,13 @@ float ofxKuZed::getFps()
 //------------------------------------------------------------------------------------------------------
 void ofxKuZed::setGpuDevice(int gpu_id)
 {
-	params_.device = gpu_id;
+	params_.sdk_gpu_id = gpu_id;
 }
 
 //------------------------------------------------------------------------------------------------------
 void ofxKuZed::setDepthModeQuality(int depth_mode)
 {
-	params_.mode = sl::zed::MODE(depth_mode);
+	params_.depth_mode = sl::DEPTH_MODE(depth_mode);
 }
 
 //------------------------------------------------------------------------------------------------------
@@ -460,19 +517,19 @@ void ofxKuZed::setDepthPostprocess(int postprocess_mode)
 //------------------------------------------------------------------------------------------------------
 void ofxKuZed::setDepthMinimumDistance(int min_dist)
 {
-	params_.minimumDistance = min_dist;
+	params_.depth_minimum_distance = min_dist;
 }
 
 //------------------------------------------------------------------------------------------------------
 void ofxKuZed::setVFlip(bool vflip)
 {
-	params_.vflip = vflip;
+	params_.camera_image_flip = vflip;
 }
 
 //------------------------------------------------------------------------------------------------------
 void ofxKuZed::setVerboseOutput(bool verbose)
 {
-	params_.verbose = verbose;
+	params_.sdk_verbose = verbose;
 }
 
 //------------------------------------------------------------------------------------------------------

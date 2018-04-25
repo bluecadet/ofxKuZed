@@ -121,22 +121,26 @@ Addon is written by Kuflex lab, https://github.com/kuflex/ofxKuZed
 #pragma once
 
 #include "ofMain.h"
-#include <zed/Camera.hpp>
+#define LoadLibrary  LoadLibraryW
+#include <cuda.h>
+#include <cuda_runtime.h>
+#include <cuda_device_runtime_api.h>
+#include <sl/Camera.hpp>
 
 //Available ZED resolutions
-const int ZED_RESOLUTION_HD2K = sl::zed::HD2K;	//2208*1242, supported framerate : 15 fps 
-const int ZED_RESOLUTION_HD1080 = sl::zed::HD1080;	//1920*1080, supported framerates : 15, 30 fps
-const int ZED_RESOLUTION_HD720 = sl::zed::HD720; //1280*720, supported framerates : 15, 30, 60 fps
-const int ZED_RESOLUTION_VGA = sl::zed::VGA;	//672*376, supported framerates : 15, 30, 60, 100 fps
+const int ZED_RESOLUTION_HD2K = sl::RESOLUTION_HD2K;	//2208*1242, supported framerate : 15 fps 
+const int ZED_RESOLUTION_HD1080 = sl::RESOLUTION_HD1080;	//1920*1080, supported framerates : 15, 30 fps
+const int ZED_RESOLUTION_HD720 = sl::RESOLUTION_HD720; //1280*720, supported framerates : 15, 30, 60 fps
+const int ZED_RESOLUTION_VGA = sl::RESOLUTION_VGA;	//672*376, supported framerates : 15, 30, 60, 100 fps
 
 //ZED depth computing quality
-const int ZED_DEPTH_MODE_PERFORMANCE = sl::zed::PERFORMANCE; //Fastest mode, also requires less GPU memory, the disparity map is less robust
-const int ZED_DEPTH_MODE_MEDIUM = sl::zed::MEDIUM; //Balanced quality mode, requires less GPU memory but the disparity map is a little less detailed
-const int ZED_DEPTH_MODE_QUALITY = sl::zed::QUALITY; //Better quality mode, the disparity map is more precise
+const int ZED_DEPTH_MODE_PERFORMANCE = sl::DEPTH_MODE_PERFORMANCE; //Fastest mode, also requires less GPU memory, the disparity map is less robust
+const int ZED_DEPTH_MODE_MEDIUM = sl::DEPTH_MODE_MEDIUM; //Balanced quality mode, requires less GPU memory but the disparity map is a little less detailed
+const int ZED_DEPTH_MODE_QUALITY = sl::DEPTH_MODE_QUALITY; //Better quality mode, the disparity map is more precise
 
 //ZED depth postprocessing mode
-const int ZED_DEPTH_POSTPROCESS_FILL = sl::zed::FILL;			//Occlusion filling, edge sharpening, advanced post-filtering.
-const int ZED_DEPTH_POSTPROCESS_STANDARD = sl::zed::STANDARD;	//No occlusion filling
+const int ZED_DEPTH_POSTPROCESS_FILL = sl::SENSING_MODE_FILL;// sl::zed::FILL;			//Occlusion filling, edge sharpening, advanced post-filtering.
+const int ZED_DEPTH_POSTPROCESS_STANDARD = sl::SENSING_MODE_STANDARD;// sl::zed::STANDARD;	//No occlusion filling
 
 
 class ofxKuZed
@@ -230,7 +234,7 @@ public:
 
 private:
 	//Settings
-	sl::zed::InitParams params_;
+	sl::InitParameters params_;
 	int resolution_ = ZED_RESOLUTION_HD720;
 	float fps_ = 0.0;
 	int postprocessMode_ = ZED_DEPTH_POSTPROCESS_STANDARD;
@@ -244,7 +248,7 @@ private:
 	bool pointCloudFlipZ_ = true;
 
 	//Camera
-	sl::zed::Camera* zed_ = 0;
+	sl::Camera* zed_ = 0;
 	int w_;
 	int h_;
 

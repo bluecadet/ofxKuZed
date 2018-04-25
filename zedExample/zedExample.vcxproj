@@ -22,7 +22,7 @@
     <ZED_SDK_DIR>C:\Program Files (x86)\ZED SDK</ZED_SDK_DIR>
   </PropertyGroup>
   <PropertyGroup>
-    <CUDA_DIR>C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5\</CUDA_DIR>
+    <CUDA_DIR>C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v9.0</CUDA_DIR>
   </PropertyGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{7FD42DF7-442E-479A-BA76-D0022F99702A}</ProjectGuid>
@@ -125,7 +125,7 @@
       <PreprocessorDefinitions>%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <WarningLevel>Level3</WarningLevel>
-      <AdditionalIncludeDirectories>$(ZED_SDK_DIR)\dependencies\opencv_3.1.0\include\opencv;$(ZED_SDK_DIR)\dependencies\opencv_3.1.0\include;$(ZED_SDK_DIR)\dependencies\eigen-3.2.8;$(ZED_SDK_DIR)\include;$(ZED_SDK_DIR)\include\zed;$(CUDA_DIR)\include;..\..\..\addons\ofxKuZed\src;src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ZED_SDK_DIR)\dependencies\opencv_3.1.0\include\opencv;$(ZED_SDK_DIR)\dependencies\opencv_3.1.0\include;$(ZED_SDK_DIR)\dependencies\eigen-3.2.8;$(ZED_SDK_DIR)\include;$(ZED_SDK_DIR)\include\sl_core;$(ZED_SDK_DIR)\include\sl;$(ZED_SDK_DIR)\include\sl_zed;$(CUDA_DIR)\include;..\..\..\addons\ofxKuZed\src;src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <CompileAs>CompileAsCpp</CompileAs>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
@@ -133,8 +133,8 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
-      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib;sl_zed64.lib;glu32.lib;opengl32.lib;freeglut.lib;$(ZED_SDK_DIR)\dependencies\opencv_3.1.0\x64\vc14\lib\opencv_world310d.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(ZED_SDK_DIR)/lib;$(ZED_SDK_DIR)/lib/$(Configuration);$(ZED_SDK_DIR)/dependencies/freeglut_2.8/$(Platform);$(ZED_SDK_DIR)/dependencies/freeglut_2.8/$(Platform)/$(Configuration);$(ZED_SDK_DIR)/dependencies/glew-1.12.0/$(Platform)/$(Configuration);$(ZED_SDK_DIR)/dependencies/glew-1.12.0/$(Platform);$(ZED_SDK_DIR)/dependencies/opencv_2.4.9/$(Platform)/vc11/lib;$(ZED_SDK_DIR)/dependencies/opencv_2.4.9/$(Platform)/vc11/lib/$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib;glu32.lib;opengl32.lib;freeglut.lib;$(ZED_SDK_DIR)\dependencies\opencv_3.1.0\x64\vc14\lib\opencv_world310.lib;sl_zed64.lib;sl_core64.lib;cuda.lib;cudart.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories);$(ZED_SDK_DIR)/lib;$(ZED_SDK_DIR)/lib/$(Configuration);$(ZED_SDK_DIR)/dependencies/freeglut_2.8/$(Platform);$(ZED_SDK_DIR)/dependencies/freeglut_2.8/$(Platform)/$(Configuration);$(ZED_SDK_DIR)/dependencies/glew-1.12.0/$(Platform)/$(Configuration);$(ZED_SDK_DIR)/dependencies/glew-1.12.0/$(Platform);$(ZED_SDK_DIR)/dependencies/opencv_3.1.0/$(Platform)/vc11/lib;$(CUDA_DIR)/lib/x64;$(ZED_SDK_DIR)/dependencies/opencv_3.1.0/$(Platform)/vc11/lib/$(Configuration)</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
     </PostBuildEvent>
@@ -168,7 +168,7 @@
       <PreprocessorDefinitions>%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <WarningLevel>Level3</WarningLevel>
-      <AdditionalIncludeDirectories>$(ZED_SDK_DIR)\dependencies\opencv_3.1.0\include\opencv;$(ZED_SDK_DIR)\dependencies\opencv_3.1.0\include;$(ZED_SDK_DIR)\dependencies\eigen-3.2.8;$(ZED_SDK_DIR)\include;$(ZED_SDK_DIR)\include\zed;$(CUDA_DIR)\include;..\..\..\addons\ofxKuZed\src;src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ZED_SDK_DIR)\dependencies\opencv_3.1.0\include\opencv;$(ZED_SDK_DIR)\dependencies\opencv_3.1.0\include;$(ZED_SDK_DIR)\dependencies\eigen-3.2.8;$(ZED_SDK_DIR)\include;$(ZED_SDK_DIR)\include\sl_core;$(ZED_SDK_DIR)\include\sl;$(ZED_SDK_DIR)\include\sl_zed;$(CUDA_DIR)\include;..\..\..\addons\ofxKuZed\src;src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <CompileAs>CompileAsCpp</CompileAs>
     </ClCompile>
     <Link>
@@ -178,8 +178,8 @@
       <OptimizeReferences>true</OptimizeReferences>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
-      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib;sl_zed64.lib;glu32.lib;opengl32.lib;freeglut.lib;$(ZED_SDK_DIR)\dependencies\opencv_3.1.0\x64\vc14\lib\opencv_world310.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(ZED_SDK_DIR)/lib;$(ZED_SDK_DIR)/lib/$(Configuration);$(ZED_SDK_DIR)/dependencies/freeglut_2.8/$(Platform);$(ZED_SDK_DIR)/dependencies/freeglut_2.8/$(Platform)/$(Configuration);$(ZED_SDK_DIR)/dependencies/glew-1.12.0/$(Platform)/$(Configuration);$(ZED_SDK_DIR)/dependencies/glew-1.12.0/$(Platform);$(ZED_SDK_DIR)/dependencies/opencv_2.4.9/$(Platform)/vc11/lib;$(ZED_SDK_DIR)/dependencies/opencv_2.4.9/$(Platform)/vc11/lib/$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib;glu32.lib;opengl32.lib;freeglut.lib;$(ZED_SDK_DIR)\dependencies\opencv_3.1.0\x64\vc14\lib\opencv_world310.lib;sl_zed64.lib;sl_core64.lib;cuda.lib;cudart.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories);$(ZED_SDK_DIR)/lib;$(ZED_SDK_DIR)/lib/$(Configuration);$(ZED_SDK_DIR)/dependencies/freeglut_2.8/$(Platform);$(ZED_SDK_DIR)/dependencies/freeglut_2.8/$(Platform)/$(Configuration);$(ZED_SDK_DIR)/dependencies/glew-1.12.0/$(Platform)/$(Configuration);$(ZED_SDK_DIR)/dependencies/glew-1.12.0/$(Platform);$(ZED_SDK_DIR)/dependencies/opencv_3.1.0/$(Platform)/vc11/lib;$(CUDA_DIR)/lib/x64;$(ZED_SDK_DIR)/dependencies/opencv_3.1.0/$(Platform)/vc11/lib/$(Configuration)</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
     </PostBuildEvent>
